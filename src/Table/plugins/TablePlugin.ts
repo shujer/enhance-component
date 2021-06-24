@@ -33,16 +33,25 @@ export class TablePlugin<
    * @description 获取包装后的 Props
    */
   getProps(props: Props) {
-    const { columns: propsColumns, onChange, ...restProps } = props;
-    const plugins = this.initPlugins(props);
-    const columns = this.processColumns(plugins, propsColumns ?? []);
+    const {
+      columns: propsColumns,
+      onChange: propsOnChange,
+      ...restProps
+    } = props;
+    const plugins = this.loadPlugins(props);
+    const columns = this.processColumns(plugins, propsColumns);
+    const onChange = this.processOnChange(plugins, propsOnChange);
     return {
       columns,
+      onChange,
       ...restProps,
     };
   }
 
-  private initPlugins(props: Props) {
+  /**
+   * @description 加载插件
+   */
+  private loadPlugins(props: Props) {
     const plugins: ReturnType<Plugin<R, Props>>[] = [];
     Object.values(this.plugins).forEach((pluginFn) => {
       const plugin = pluginFn(props);
@@ -51,9 +60,23 @@ export class TablePlugin<
       }
       plugins.push(plugin);
     });
-    return plugins.sort(({ stage: a = 0 }, { stage: b = 0 }) =>
-      a < b ? 1 : a > b ? -1 : 0,
-    );
+    return plugins.sort(({ stage: a = 0 }, { stage: b = 0 }) => b - a);
+  }
+
+  private processOnChange(
+    plugins: ReturnType<Plugin<R, Props>>[],
+    propsOnChange: TableProps<R>['onChange'],
+  ) {
+    const changeHanders = Object.values(plugins)
+      .filter((ele) => typeof ele.onChange === 'function')
+      .map((ele) => ele.onChange) as TableProps<R>['onChange'][];
+    const onChange: TableProps<R>['onChange'] = (...args) => {
+      propsOnChange && propsOnChange(...args);
+      changeHanders.forEach((hander) => {
+        hander && hander(...args);
+      });
+    };
+    return onChange;
   }
 
   /**
@@ -61,10 +84,9 @@ export class TablePlugin<
    */
   private processColumns(
     plugins: ReturnType<Plugin<R, Props>>[],
-    columns: Props['columns'],
+    columns: Props['columns'] = [],
   ) {
     const visitors = Object.values(plugins)
-
       .filter((ele) => typeof ele.visitor === 'function')
       .map((ele) => ele.visitor) as ColumnVisitor<R>[];
     const visitor = pipe<R>(visitors);

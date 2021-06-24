@@ -26,12 +26,6 @@ export type MultipleSorter<R> = {
   multiple?: number;
 };
 
-export type ChangeSortItem<R> = {
-  column?: ColumnType<R>;
-  order?: AntTableColumnType<R>['sortOrder'];
-  key?: string;
-};
-
 /**
  * extend sort options
  */
@@ -68,7 +62,7 @@ export interface SortOptions<R> extends Omit<SortItem<R>, 'key'> {
   /**
    * 排序发生变化的回调
    */
-  onSortChange?: (changeSorts: ChangeSortItem<R>[]) => any;
+  onSortChange?: (sorts: SortItem<R>[], changeSorts: SortItem<R>[]) => any;
 }
 
 /**
@@ -95,8 +89,8 @@ export type Plugin<
   P extends TableProps<R> = TableProps<R>,
 > = (props: P) => {
   name: string;
-  visitor?: ColumnVisitor<R>;
-  onChange?: TableProps<R>['onChange'];
   stage?: number;
   required?: string;
+  visitor?: ColumnVisitor<R>;
+  onChange?: TableProps<R>['onChange'];
 };

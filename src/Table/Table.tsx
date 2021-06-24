@@ -22,10 +22,15 @@ const Table = <RecordType extends object = object>(
     plugin.register('plugin:sort', TableSortPlugin);
     return plugin;
   }, []);
+
   /**
-   * 获取处理后的数据
+   * 获取处理后的 props
    */
   const pluginProps = plugin.getProps(props);
+
+  /**
+   * 将数据传递给 Antd Table
+   */
   return <AntTable<RecordType> {...pluginProps}></AntTable>;
 };
 

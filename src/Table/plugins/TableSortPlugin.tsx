@@ -1,5 +1,4 @@
 import {
-  ChangeSortItem,
   ColumnType,
   SortItem,
   TableProps,
@@ -16,17 +15,12 @@ const TableSortPlugin = <
   const { sorts } = sortOptions;
   const sortConfigs = sorts.reduce<{ [x: string]: SortItem<R> }>(
     (obj, item) => {
-      const sorter = item.sorter || sortOptions.sorter;
-      const sortDirections = item.sortDirections || sortOptions.sortDirections;
-      const defaultSortOrder =
-        item.defaultSortOrder || sortOptions.defaultSortOrder;
-      const sortOrder = item.sortOrder || sortOptions.sortOrder;
       let config = {
         key: item.key,
-        sortDirections,
-        defaultSortOrder,
-        sorter,
-        sortOrder,
+        sortDirections: item.sortDirections || sortOptions.sortDirections,
+        defaultSortOrder: item.defaultSortOrder || sortOptions.defaultSortOrder,
+        sorter: item.sorter || sortOptions.sorter,
+        sortOrder: item.sortOrder || sortOptions.sortOrder,
       };
       obj[item.key] = omit<SortItem<R>>(config);
       return obj;
@@ -44,25 +38,29 @@ const TableSortPlugin = <
     },
     onChange(...args: TableChangeParameters<R>) {
       const [_pagination, _filters, sorter, extra] = args;
-      if (extra.action === 'sort' && sorter) {
-        let changeSorts: ChangeSortItem<R>[] = [];
-        if (Array.isArray(sorter)) {
-          changeSorts = sorter.map((item) => ({
-            key: item.columnKey as string,
-            column: item.column,
-            order: item.order,
-          }));
-        } else {
-          changeSorts = [
-            {
-              key: sorter.columnKey as string,
-              column: sorter.column,
-              order: sorter.order,
-            },
-          ];
-        }
-        sortOptions.onSortChange?.(changeSorts);
+      if (extra.action !== 'sort' || !sorter) {
+        return;
       }
+      let changeSorts: { [x: string]: SortItem<R> } = {};
+      let sorters = Array.isArray(sorter) ? sorter : [sorter];
+
+      changeSorts = sorters.reduce((obj, ele) => {
+        let key = ele.columnKey + '';
+        let item: SortItem<R> = {
+          ...(sortConfigs[key] ?? {}),
+          sortOrder: ele.order,
+        };
+        obj[key] = item;
+        return obj;
+      }, {} as { [x: string]: SortItem<R> });
+
+      let nextSorts = sorts.map((ele) => ({
+        ...ele,
+        ...(changeSorts[ele.key] ?? {}),
+        sortOrder: changeSorts[ele.key]?.sortOrder ?? null,
+      }));
+
+      sortOptions.onSortChange?.(nextSorts, Object.values(changeSorts));
     },
   };
 };
